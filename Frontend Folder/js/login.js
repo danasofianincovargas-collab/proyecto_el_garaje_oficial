@@ -55,6 +55,18 @@ document.addEventListener("DOMContentLoaded", () => {
             localStorage.removeItem("correoRecordado");
         }
 
+        // En GitHub Pages no hay backend: ir directo al modo demo y
+        // evitar el intento a localhost (puede quedarse esperando).
+        if (window.location.hostname.endsWith("github.io")) {
+            const usuarioDemo = validarCredencialesDemo(correo, password);
+            if (usuarioDemo) {
+                iniciarSesionDemo(usuarioDemo);
+            } else {
+                mostrarErrorLogin(alertaError, "Correo o contraseña incorrectos.");
+            }
+            return;
+        }
+
         try {
             const datos = await usuarioService.login({ correo, password });
 
