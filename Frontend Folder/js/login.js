@@ -49,14 +49,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const correo = inputCorreo.value.trim();
         const password = inputPassword.value.trim();
 
+        if (chkRecordar && chkRecordar.checked) {
+            localStorage.setItem("correoRecordado", correo);
+        } else {
+            localStorage.removeItem("correoRecordado");
+        }
+
         try {
             const datos = await usuarioService.login({ correo, password });
-
-            if (chkRecordar && chkRecordar.checked) {
-                localStorage.setItem("correoRecordado", correo);
-            } else {
-                localStorage.removeItem("correoRecordado");
-            }
 
             // Sesión activa en memoria de pestaña (sin contraseña).
             // Fuente real de autorización: cada panel valida contra
@@ -68,10 +68,44 @@ document.addEventListener("DOMContentLoaded", () => {
 
             window.location.href = `${datos.usuario.rol}.html`;
         } catch (error) {
+            // Servidor caído (GitHub Pages) o error de la API: intenta
+            // el modo demo con las credenciales de prueba publicadas.
+            const usuarioDemo = validarCredencialesDemo(correo, password);
+            if (usuarioDemo) {
+                iniciarSesionDemo(usuarioDemo);
+                return;
+            }
             mostrarErrorLogin(alertaError, error.message || "Correo o contraseña incorrectos.");
         }
     });
 });
+
+/* =================================================================
+   MODO DEMO (GitHub Pages sin backend)
+   Solo credenciales de prueba ya visibles en login.html.
+   ================================================================= */
+const USUARIOS_DEMO = [
+    { id: 1, nombre: "Administrador General", correo: "admin@elgaraje.com", password: "Garaje2026*", rol: "admin" },
+    { id: 2, nombre: "Jefe de Cocina", correo: "cocina@elgaraje.com", password: "Cocina2026*", rol: "cocina" },
+    { id: 3, nombre: "Mesero Principal", correo: "mesero@elgaraje.com", password: "Mesero2026*", rol: "mesero" }
+];
+
+function validarCredencialesDemo(correo, password) {
+    const encontrado = USUARIOS_DEMO.find(
+        (u) => u.correo === correo.toLowerCase() && u.password === password
+    );
+    if (!encontrado) return null;
+    const { password: _omitida, ...usuarioSinPassword } = encontrado;
+    return usuarioSinPassword;
+}
+
+function iniciarSesionDemo(usuario) {
+    // sessionStorage: lo que lee protegerVista() en admin/cocina/mesero.
+    // localStorage: copia pedida para el modo demo.
+    sessionStorage.setItem("usuarioActivo", JSON.stringify(usuario));
+    localStorage.setItem("usuarioDemo", JSON.stringify(usuario));
+    window.location.href = `${usuario.rol}.html`;
+}
 
 function mostrarErrorLogin(alertaError, mensaje) {
     if (!alertaError) {
